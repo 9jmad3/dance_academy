@@ -21,9 +21,16 @@ class Schedules extends Component
     public bool $is_active = true;
     public int $sort_order = 0;
 
+    public ?string $filter_dance_style_id = null;
+    public string $filter_day_of_week = '';
+    public ?string $filter_teacher_id = null;
+
     protected function academy(): Academy
     {
-        return Academy::query()->first() ?: Academy::firstOrCreate(['slug' => 'academia-demo'], ['name' => 'Academia Demo']);
+        return Academy::query()->first() ?: Academy::firstOrCreate(
+            ['slug' => 'academia-demo'],
+            ['name' => 'Academia Demo']
+        );
     }
 
     protected function rules(): array
@@ -49,7 +56,7 @@ class Schedules extends Component
 
         unset($validated['teacher_ids']);
 
-        $schedule = \App\Models\Schedule::updateOrCreate(
+        $schedule = Schedule::updateOrCreate(
             ['id' => $this->editingId],
             $validated
         );
@@ -94,28 +101,65 @@ class Schedules extends Component
         $this->resetValidation();
     }
 
+    public function resetFilters(): void
+    {
+        $this->filter_dance_style_id = null;
+        $this->filter_day_of_week = '';
+        $this->filter_teacher_id = null;
+    }
+
     public function render()
     {
         $academy = $this->academy();
 
+        $styles = DanceStyle::where('academy_id', $academy->id)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        $teachers = Teacher::where('academy_id', $academy->id)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        $schedulesQuery = Schedule::with(['danceStyle', 'teachers'])
+            ->where('academy_id', $academy->id);
+
+        if ($this->filter_dance_style_id) {
+            $schedulesQuery->where('dance_style_id', $this->filter_dance_style_id);
+        }
+
+        if ($this->filter_day_of_week !== '') {
+            $schedulesQuery->where('day_of_week', $this->filter_day_of_week);
+        }
+
+        if ($this->filter_teacher_id) {
+            $schedulesQuery->whereHas('teachers', function ($query) {
+                $query->where('teachers.id', $this->filter_teacher_id);
+            });
+        }
+
+        $schedules = $schedulesQuery
+            ->orderByRaw("CASE day_of_week
+                WHEN 'monday' THEN 1
+                WHEN 'tuesday' THEN 2
+                WHEN 'wednesday' THEN 3
+                WHEN 'thursday' THEN 4
+                WHEN 'friday' THEN 5
+                WHEN 'saturday' THEN 6
+                WHEN 'sunday' THEN 7
+                ELSE 8 END")
+            ->orderBy('start_time')
+            ->orderBy('sort_order')
+            ->get();
+
         return view('livewire.admin.schedules', [
             'days' => Schedule::DAYS,
-            'styles' => DanceStyle::where('academy_id', $academy->id)->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
-            'teachers' => Teacher::where('academy_id', $academy->id)->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
-            'schedules' => Schedule::with(['danceStyle', 'teachers'])
-                ->where('academy_id', $academy->id)
-                ->orderByRaw("CASE day_of_week
-                    WHEN 'monday' THEN 1
-                    WHEN 'tuesday' THEN 2
-                    WHEN 'wednesday' THEN 3
-                    WHEN 'thursday' THEN 4
-                    WHEN 'friday' THEN 5
-                    WHEN 'saturday' THEN 6
-                    WHEN 'sunday' THEN 7
-                    ELSE 8 END")
-                ->orderBy('start_time')
-                ->orderBy('sort_order')
-                ->get(),
+            'styles' => $styles,
+            'teachers' => $teachers,
+            'schedules' => $schedules,
         ])->layout('layouts.admin', ['title' => 'Horarios']);
     }
 }

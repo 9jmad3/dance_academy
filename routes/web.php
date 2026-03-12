@@ -4,7 +4,9 @@ use App\Livewire\Admin\AcademySettings;
 use App\Livewire\Admin\DanceStyles;
 use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\Schedules;
+use App\Http\Controllers\Admin\SchedulePdfController;
 use App\Livewire\Admin\Teachers;
+use App\Livewire\Admin\Users;
 use App\Models\Academy;
 use App\Models\DanceStyle;
 use App\Models\Schedule;
@@ -165,11 +167,13 @@ Route::get('/contacto', function () use ($academyResolver) {
     ]);
 })->name('public.contact');
 
-Route::middleware(['auth'])->prefix('admin')->group(function () {
-    Route::get('/', Dashboard::class)->name('admin.dashboard');
-    Route::get('/academia', AcademySettings::class)->name('admin.academy');
-    Route::get('/estilos', DanceStyles::class)->name('admin.styles');
-    Route::get('/profesores', Teachers::class)->name('admin.teachers');
-    Route::get('/horarios', Schedules::class)->name('admin.schedules');
-    Route::get('/cuenta', Account::class)->name('admin.account');
+Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', Dashboard::class)->name('dashboard');
+    Route::get('/academia', AcademySettings::class)->name('academy');
+    Route::get('/estilos', DanceStyles::class)->name('styles');
+    Route::get('/profesores', Teachers::class)->name('teachers');
+    Route::get('/horarios', Schedules::class)->name('schedules');
+    Route::get('/horarios/pdf', SchedulePdfController::class)->name('schedules.pdf');
+    Route::get('/usuarios', Users::class)->name('users');
+    Route::get('/cuenta', Account::class)->name('account');
 });

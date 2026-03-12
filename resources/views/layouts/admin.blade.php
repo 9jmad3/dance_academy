@@ -68,6 +68,11 @@
                     Horarios
                 </a>
 
+                <a href="{{ route('admin.users') }}"
+                    class="block rounded-xl px-4 py-3 text-sm font-medium transition hover:bg-slate-800 {{ request()->routeIs('admin.users') ? 'bg-slate-800' : '' }}">
+                    Usuarios
+                </a>
+
                 <a href="{{ route('public.home') }}"
                     class="block rounded-xl px-4 py-3 text-sm font-medium text-emerald-300 transition hover:bg-slate-800">
                     Ver web pública
